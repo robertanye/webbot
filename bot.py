@@ -1,79 +1,111 @@
+import time
+from abc import abstractmethod, ABCMeta
 from re import sub
 from decimal import Decimal
-
+import smtplib
+import ssl
 
 from webbot import Browser
 import logging
 import json
-import sys
 
-logging.basicConfig(level=logging.DEBUG)
+smtp_server = "smtp.gmail.com"
+port = 465
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(" webbot")
 
-def login(config):
-    web.type(config['email'], into='Email')
-    web.click('Continue', tag='span')
-    web.type(config['password'], into='Password', id='passwordFieldId')
-    web.click('Sign In', id='signInButton')  # you are logged in . woohoooo
 
-def search( product ):
-    web.type(product, into="Search")
-    web.press(web.Key.ENTER)
-    results = web.find_elements(classname="product-finding-container")
-    logger.debug("Found " + results)
+class Bot:
+    __metaclass__ = ABCMeta
+    web = None
 
-def add_to_cart():
-    cart_button = web.find_elements(xpath="//*[contains(text(),'add-to-cart-button')]")
-    # look for temporarily unavailable
-    for item in cart_button:
-        if item.text == 'Temporarily unavailable':
-            logger.error("not in yet")
+    def __init__(self):
+        with open("config.json") as json_file:
+            self.config = json.load(json_file)
+            logger.info("email " + self.config['email'])
+            logger.info("password  " + self.config['password'])
+            logger.info("url  " + self.config['url'])
+            logger.info("max price " + str(self.config['max price']))
+        self.web = Browser()
+
+    def send_email(self, subject, body):
+        message = """ 
+        Subject: CCI Primers Available
+        
+        Found CCI Primers
+        
+        """
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(self.config['email'], self.config['email_pwd'])
+            server.sendmail(self.config['email'], self.config['email'], message)
+
+    @abstractmethod
+    def restock_check(self):
+        """
+        This method should be defined in a derived class as it
+        is different for different sites
+        :return:
+        """
+    @abstractmethod
+    def checkout(self):
+        """
+        This method should be defined in a derived class as it is
+        is different for different sites
+        :return:
+        """
+
+
+    @abstractmethod
+    def signout(self):
+        """
+        only defined in the derived class
+        :return:
+        """
+
+    def search(self, product):
+        self.web.type(product, into="Search")
+        self.web.press(self.web.Key.ENTER)
+        results = self.web.find_elements(classname="product-finding-container")
+        logger.info("Found " + results)
+
+    @abstractmethod
+    def check_for_available(self):
+        """
+        only defined in the derived class
+        :return:
+        """
+
+    @abstractmethod
+    def checkout(self):
+        '''
+
+        '''
+        # finish the buy
+
+    @abstractmethod
+    def add_to_cart(self):
+        """
+        only defined in the derived class
+        :return:
+        """
+
+    def price_check(self):
+        price = self.get_price()
+        if price == -1:
             return False
-        if item.text == 'Add to Cart':
-            logger.info("Adding to Cart")
-            web.press(web.Key.Enter, into=item)
+
+        if price <= self.config['max price']:
             return True
+        else:
+            return False
 
-    logger.debug("Cart is " + cart_button )
+    @abstractmethod
+    def get_price(self):
+        """
+        only defined in the derived class
+        :return:
+        """
+    def get_config(self):
+        return self.config
 
-def get_price():
-    current_price = web.find_elements(text="Our Price", xpath="//*[contains(text(),'priceblock')]", classname="active-price" )
-    if len(current_price) > 0:
-        ps = current_price[0].text.split('\n')
-        listed_price = ps[1]
-        logger.debug("Found Price is: " + listed_price)
-        # convert the $ XX.XX to a number
-        item_value = Decimal(sub(r'[^\d.]', '', listed_price))
-        return item_value
-    else:
-        return -1
-
-def load_configs():
-    with open("config.json") as json_file:
-        config = json.load(json_file)
-        logger.debug("email " + config['email'])
-        logger.debug("password  " + config['password'])
-        logger.debug("url  " + config['url'])
-        logger.debug("max price " + str(config['max price']))
-    return config
-
-
-
-bot_config = load_configs()
-
-web = Browser()
-try:
-    web.go_to('midwayusa.com/account/authentication')
-
-    login(bot_config)
-    web.go_to(bot_config['url'])
-    #search('CCI large pistol primer')
-
-    price = get_price()
-    if price == -1:
-        sys.exit(1)
-    if price <= bot_config['max price']:
-        add_to_cart()
-    web.close_current_tab()
-except( RuntimeError, TypeError, NameError):
-    logger.error("Took exception: ")
