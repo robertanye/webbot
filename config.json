@@ -1,0 +1,16 @@
+{
+  "email": "robertanye@gmail.com",
+  "password": "PASSWORD",
+  "email_pwd": "PASSWORD",
+  "login_url": "midwayusa.com/account/authentication",
+  "cciurl": "https://www.midwayusa.com/product/1301578942?pid=657323",
+  "url": "https://www.midwayusa.com/product/953256026?pid=256026",
+  "knifeurl": "https://www.midwayusa.com/product/102362198?pid=681423",
+  "oldurl": "https://www.midwayusa.com/product/1023136876?pid=986006",
+  "loaderurl": "https://www.midwayusa.com/product/1013020843?pid=814175",
+  "dieurl": "https://www.midwayusa.com/product/101119737",
+  "max price": 65.00,
+  "max retries": 100000,
+  "retry time": 2.5
+
+}
